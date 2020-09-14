@@ -14,8 +14,10 @@ import vlc
 
 DEV_MODE=True
 RAINY_DAYS=[2, 6]  # wed, sun
-OCEAN_DAYS=[0, 1, 4]  # mon, tues, fri
-SUNNY_DAYS=[3, 5]  # thurs, sat
+# OCEAN_DAYS=[0, 1, 4]  # mon, tues, fri
+OCEAN_DAYS=[]
+# SUNNY_DAYS=[3, 5]  # thurs, sat
+SUNNY_DAYS=[0,1,3,4,5]
 DOWNLOAD_DIR="downloads"
 SOUNDS_CSV="sound_links.csv"
 SOUND_DIR="sounds"
