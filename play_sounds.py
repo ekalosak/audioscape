@@ -90,7 +90,7 @@ def download(links_and_titles: pd.DataFrame) -> pd.Series:
         save_path = Path(DOWNLOAD_DIR) / filename
         save_paths.append(save_path)
         if not save_path.exists():
-            debug(f"downloading {title} from {url} to {save_path}")
+            info(f"downloading {title} from {url} to {save_path}")
             download_url(url, save_path)
         else:
             debug(f"{save_path} already exists")
