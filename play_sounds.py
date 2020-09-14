@@ -13,6 +13,9 @@ import zipfile
 import vlc
 
 DEV_MODE=True
+RAINY_DAYS=[2, 6]  # wed, sun
+OCEAN_DAYS=[0, 1, 4]  # mon, tues, fri
+SUNNY_DAYS=[3, 5]  # thurs, sat
 DOWNLOAD_DIR="downloads"
 SOUNDS_CSV="sound_links.csv"
 SOUND_DIR="sounds"
@@ -21,7 +24,6 @@ SOUND_DIR="sounds"
 LOG_MAXBYTES=262144  # 64**3
 # DIRS=[DATA_DIR, LOG_DIR]
 DIRS=[DOWNLOAD_DIR, SOUND_DIR]
-RAINY_DAYS=[2, 6]  # wed, sun
 SHORTEST_PLAY=5  # sec; sleep the remainder of this period if played sound is shorter
 ALLOWED_SOUNDFILES=['.mp3', '.wav', '.aiff', '.oog', '.flac']
 
@@ -125,6 +127,8 @@ def tod() -> (str, str):
         td = "Day"
     if wd in RAINY_DAYS:
         w = "Raining"
+    elif wd in OCEAN_DAYS:
+        w = "Ocean"
     else:
         w = "Sunny"
     return td, w
