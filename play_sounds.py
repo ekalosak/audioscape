@@ -3,36 +3,69 @@ import os
 import time
 import pathlib as pl
 from pathlib import Path
+# import logging
+# from logging import handlers
 
 import requests
 import pandas as pd
 import zipfile
 import vlc
 
+DEV_MODE=False
 SOUNDS_CSV="sound_links.csv"
-LINK="http://www.orangefreesounds.com/wp-content/uploads/2020/03/Sounds-of-spring.zip"
 DATA_DIR="sounds"
+LOG_DIR="logs"
+LOG_FN=LOG_DIR+"/play_sounds.log"
+LOG_MAXBYTES=262144  # 64**3
+DIRS=[DATA_DIR, LOG_DIR]
 RAINY_DAYS=[2, 6]  # wed, sun
 
-def _log(msg: str, head: str="DEBUG"):
+""" TODO
+1. When a file in DATA_DIR is not specified in the SOUNDS_CSV, delete it
+"""
+
+def _log(msg: str, head: str="DEBUG", show: bool=True):
     tm = time.asctime()
-    print(f"{head} - {tm}: {msg}")
+    s = f"{head} - {tm}: {msg}"
+    if show:
+        print(s)
 def info(msg: str):
     _log(msg, "INFO")
 def debug(msg: str):
-    _log(msg, "DEBUG")
+    _log(msg, "DEBUG", show=DEV_MODE)
+
+
+# def make_logger():
+#     logging.basicConfig(format='%(levelname)s:%(asctime): %(message)s', level=logging.DEBUG)
+#     logger = logging.getLogger(__name__)
+#     return logger
+#
+# def add_handlers(logger):
+#     fhandler = handlers.RotatingFileHandler(
+#             filename = LOG_FN,
+#             maxBytes = LOG_MAXBYTES,
+#             )
+#     shandler = handlers.StreamHandler()
+#     handlers = [fhandler, shandler]
+#     for h in handlers:
+#         logger.addHandler(h)
+#     return logger
 
 
 def setup():
     """ create project structure
     """
-    dl_dir = pl.Path(DATA_DIR)
-    if not dl_dir.exists():
-        debug(f"Creating download directory: {dl_dir}")
-        dl_dir.mkdir()
+    dirs = [pl.Path(s) for s in DIRS]
+    for d in dirs:
+        if not d.exists():
+            info(f"Creating download directory: {d}")
+            d.mkdir()
+        else:
+            debug(f"{d} already exists")
 
 
 def load_data(soundscsv: str) -> pd.DataFrame:
+    debug(f"reading data from {soundscsv}")
     sdf=pd.read_csv(soundscsv)
     return sdf
 
@@ -96,7 +129,11 @@ def play_from_path(soundpath: Path) -> float:
     try:
         p = vlc.MediaPlayer(soundpath)
         p.play()
-        breakpoint()
+        time.sleep(0.1)
+        while p.is_playing():
+            timeleft = p.get_length() / 1000
+            debug(f"sleeping {round(timeleft)} sec until {soundpath} is over")
+            time.sleep(timeleft + 0.1)
     except Exception as e:
         debug(f"Encountered error playing {soundpath}: {str(e)}")
         return 0.
@@ -113,7 +150,6 @@ def play_one(df: pd.DataFrame):
     mp3mask = df['mp3path'].notna()
     mask = mp3mask & timemask & weathermask
     if not mask.any():
-        breakpoint()
         raise Exception(f"{SOUNDS_CSV} has no links for <{t_str}, {d_str}>")
     tdf = df[mask]
     row = tdf.sample(1)
@@ -121,8 +157,7 @@ def play_one(df: pd.DataFrame):
     title = row["title"].values[0]
     td = row["Time"].values[0]
     weather = row["Day"].values[0]
-    info(f"Playing {title} from {_soundpath}")
-    debug(f"It's a {td}-time sound for a {weather} day.")
+    info(f"Playing {title} from {_soundpath}, a {td}-time sound for a {weather} day.")
     soundpath = Path(_soundpath)
     time_played = play_from_path(soundpath)
     if time_played < 5:
