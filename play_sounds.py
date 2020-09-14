@@ -183,7 +183,6 @@ def unzip(zippaths: pd.Series) -> pd.Series:
     extracted_paths = []
     for path in zippaths:
         if not path.suffix == ".zip":
-            debug(f"{path} is not a zip file")
             if is_sound_file(path):
                 debug(f"{path} is a sound file, skipping extraction")
                 extracted_path = path
