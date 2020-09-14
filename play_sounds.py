@@ -14,14 +14,18 @@ import vlc
 DEV_MODE=False
 SOUNDS_CSV="sound_links.csv"
 DATA_DIR="sounds"
-LOG_DIR="logs"
-LOG_FN=LOG_DIR+"/play_sounds.log"
+# LOG_DIR="logs"
+# LOG_FN=LOG_DIR+"/play_sounds.log"
 LOG_MAXBYTES=262144  # 64**3
-DIRS=[DATA_DIR, LOG_DIR]
+# DIRS=[DATA_DIR, LOG_DIR]
+DIRS=[DATA_DIR]
 RAINY_DAYS=[2, 6]  # wed, sun
+SHORTEST_PLAY=5  # sec; sleep the remainder of this period if played sound is shorter
+ALLOWED_SOUNDFILES=['.mp3', '.wav']
 
 """ TODO
 1. When a file in DATA_DIR is not specified in the SOUNDS_CSV, delete it
+2. Logging to file (how to make logger global?)
 """
 
 def _log(msg: str, head: str="DEBUG", show: bool=True):
@@ -29,6 +33,8 @@ def _log(msg: str, head: str="DEBUG", show: bool=True):
     s = f"{head} - {tm}: {msg}"
     if show:
         print(s)
+def error(msg: str):
+    _log(msg, "ERROR")
 def info(msg: str):
     _log(msg, "INFO")
 def debug(msg: str):
@@ -58,7 +64,7 @@ def setup():
     dirs = [pl.Path(s) for s in DIRS]
     for d in dirs:
         if not d.exists():
-            info(f"Creating download directory: {d}")
+            info(f"Creating directory: {d}")
             d.mkdir()
         else:
             debug(f"{d} already exists")
@@ -135,7 +141,7 @@ def play_from_path(soundpath: Path) -> float:
             debug(f"sleeping {round(timeleft)} sec until {soundpath} is over")
             time.sleep(timeleft + 0.1)
     except Exception as e:
-        debug(f"Encountered error playing {soundpath}: {str(e)}")
+        error(f"Encountered error playing {soundpath}: {str(e)}")
         return 0.
     t1 = time.time()
     time_played = t1-t0
@@ -144,6 +150,8 @@ def play_from_path(soundpath: Path) -> float:
 
 
 def play_one(df: pd.DataFrame):
+    """ Plays a sound from the <df> matching current local conditions
+    """
     t_str, d_str = tod()
     timemask = df['Time'] == t_str
     weathermask = df['Day'] == d_str
@@ -160,10 +168,16 @@ def play_one(df: pd.DataFrame):
     info(f"Playing {title} from {_soundpath}, a {td}-time sound for a {weather} day.")
     soundpath = Path(_soundpath)
     time_played = play_from_path(soundpath)
-    if time_played < 5:
-        debug(f"{soundpath} played for a short time ({time_played} sec), sleeping")
-        time.sleep(6-time_played)
+    if time_played < SHORTEST_PLAY and time_played > 0:
+        sleeptime = SHORTEST_PLAY - time_played
+        debug(f"{soundpath} played for a short time ({round(time_played,4)} sec), sleeping for {round(sleeptime,4)} seconds")
+        time.sleep(sleeptime)
 
+def is_sound_file(path_str: str) -> bool:
+    for ftp in ALLOWED_SOUNDFILES:
+        if path_str.endswith(ftp):
+            return True
+    return False
 
 def unzip(zippaths: pd.Series) -> pd.Series:
     """ Unzip and move mp3s
@@ -175,7 +189,10 @@ def unzip(zippaths: pd.Series) -> pd.Series:
             extracted_path = None
         else:
             with zipfile.ZipFile(path, 'r') as zip_ref:
-                mp3filenames = [fr.filename for fr in zip_ref.filelist if fr.filename.endswith('.mp3')]
+                mp3filenames = [
+                        fr.filename for fr in zip_ref.filelist
+                        if is_sound_file(fr.filename)
+                        ]
                 if len(mp3filenames) == 0:
                     extracted_path = None
                     debug(f"{path} contains no mp3 files")
