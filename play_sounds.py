@@ -3,6 +3,7 @@ import os
 import time
 import pathlib as pl
 from pathlib import Path
+from typing import List
 # import logging
 # from logging import handlers
 
@@ -12,20 +13,20 @@ import zipfile
 import vlc
 
 DEV_MODE=True
+DOWNLOAD_DIR="downloads"
 SOUNDS_CSV="sound_links.csv"
-DATA_DIR="sounds"
+SOUND_DIR="sounds"
 # LOG_DIR="logs"
 # LOG_FN=LOG_DIR+"/play_sounds.log"
 LOG_MAXBYTES=262144  # 64**3
 # DIRS=[DATA_DIR, LOG_DIR]
-DIRS=[DATA_DIR]
+DIRS=[DOWNLOAD_DIR, SOUND_DIR]
 RAINY_DAYS=[2, 6]  # wed, sun
 SHORTEST_PLAY=5  # sec; sleep the remainder of this period if played sound is shorter
 ALLOWED_SOUNDFILES=['.mp3', '.wav', '.aiff', '.oog', '.flac']
 
 """ TODO
-1. When a file in DATA_DIR is not specified in the SOUNDS_CSV, delete it
-2. Logging to file (how to make logger global?)
+1. Logging to file (how to make logger global?)
 """
 
 def _log(msg: str, head: str="DEBUG", show: bool=True):
@@ -84,7 +85,7 @@ def download(links_and_titles: pd.DataFrame) -> pd.Series:
         url = row["URL"]
         title = row["title"]
         filename = url.split("/")[-1]
-        save_path = Path(DATA_DIR) / filename
+        save_path = Path(DOWNLOAD_DIR) / filename
         save_paths.append(save_path)
         if not save_path.exists():
             debug(f"downloading {title} from {url} to {save_path}")
@@ -204,9 +205,13 @@ def unzip(zippaths: pd.Series) -> pd.Series:
                         if len(mp3filenames) > 1:
                             debug(f"{zip_ref.filename} contains more than one mp3 file, selecting first one")
                         debug(f"extracting {mp3filename}")
-                        extracted_path = zip_ref.extract(mp3filename, path=DATA_DIR)
+                        extracted_path = zip_ref.extract(
+                                mp3filename,
+                                path=SOUND_DIR
+                                )
             except Exception as e:
                 error(f"Encountered error unzipping {path}: {str(e)}")
+                extracted_path = None
         extracted_paths.append(extracted_path)
     return pd.Series(extracted_paths)
 
