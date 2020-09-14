@@ -11,7 +11,7 @@ import pandas as pd
 import zipfile
 import vlc
 
-DEV_MODE=False
+DEV_MODE=True
 SOUNDS_CSV="sound_links.csv"
 DATA_DIR="sounds"
 # LOG_DIR="logs"
@@ -173,11 +173,8 @@ def play_one(df: pd.DataFrame):
         debug(f"{soundpath} played for a short time ({round(time_played,4)} sec), sleeping for {round(sleeptime,4)} seconds")
         time.sleep(sleeptime)
 
-def is_sound_file(path_str: str) -> bool:
-    for ftp in ALLOWED_SOUNDFILES:
-        if path_str.lower().endswith(ftp):
-            return True
-    return False
+def is_sound_file(sound: Path) -> bool:
+    return sound.suffix.lower() in ALLOWED_SOUNDFILES
 
 def unzip(zippaths: pd.Series) -> pd.Series:
     """ Unzip and move mp3s
@@ -185,23 +182,31 @@ def unzip(zippaths: pd.Series) -> pd.Series:
     extracted_paths = []
     for path in zippaths:
         if not path.suffix == ".zip":
-            debug(f"{path} is not a zip file, skipping")
-            extracted_path = None
+            debug(f"{path} is not a zip file")
+            if is_sound_file(path):
+                debug(f"{path} is a sound file, skipping extraction")
+                extracted_path = path
+            else:
+                debug(f"{path} is an unrecognized filetype, skipping")
+                extracted_path = None
         else:
-            with zipfile.ZipFile(path, 'r') as zip_ref:
-                mp3filenames = [
-                        fr.filename for fr in zip_ref.filelist
-                        if is_sound_file(fr.filename)
-                        ]
-                if len(mp3filenames) == 0:
-                    extracted_path = None
-                    debug(f"{path} contains no mp3 files")
-                elif len(mp3filenames) >= 1:
-                    mp3filename = mp3filenames[0]
-                    if len(mp3filenames) > 1:
-                        debug(f"{zip_ref.filename} contains more than one mp3 file, selecting first one")
-                    debug(f"extracting {mp3filename}")
-                    extracted_path = zip_ref.extract(mp3filename, path=DATA_DIR)
+            try:
+                with zipfile.ZipFile(path, 'r') as zip_ref:
+                    mp3filenames = [
+                            fr.filename for fr in zip_ref.filelist
+                            if is_sound_file(Path(fr.filename))
+                            ]
+                    if len(mp3filenames) == 0:
+                        extracted_path = None
+                        debug(f"{path} contains no mp3 files")
+                    elif len(mp3filenames) >= 1:
+                        mp3filename = mp3filenames[0]
+                        if len(mp3filenames) > 1:
+                            debug(f"{zip_ref.filename} contains more than one mp3 file, selecting first one")
+                        debug(f"extracting {mp3filename}")
+                        extracted_path = zip_ref.extract(mp3filename, path=DATA_DIR)
+            except Exception as e:
+                error(f"Encountered error unzipping {path}: {str(e)}")
         extracted_paths.append(extracted_path)
     return pd.Series(extracted_paths)
 
