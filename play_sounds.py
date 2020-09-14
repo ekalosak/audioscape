@@ -21,7 +21,7 @@ LOG_MAXBYTES=262144  # 64**3
 DIRS=[DATA_DIR]
 RAINY_DAYS=[2, 6]  # wed, sun
 SHORTEST_PLAY=5  # sec; sleep the remainder of this period if played sound is shorter
-ALLOWED_SOUNDFILES=['.mp3', '.wav']
+ALLOWED_SOUNDFILES=['.mp3', '.wav', '.aiff', '.oog', '.flac']
 
 """ TODO
 1. When a file in DATA_DIR is not specified in the SOUNDS_CSV, delete it
@@ -175,7 +175,7 @@ def play_one(df: pd.DataFrame):
 
 def is_sound_file(path_str: str) -> bool:
     for ftp in ALLOWED_SOUNDFILES:
-        if path_str.endswith(ftp):
+        if path_str.lower().endswith(ftp):
             return True
     return False
 
