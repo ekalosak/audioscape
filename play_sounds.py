@@ -189,7 +189,8 @@ def unzip(zippaths: pd.Series) -> pd.Series:
         if not path.suffix == ".zip":
             if is_sound_file(path):
                 debug(f"{path} is a sound file, skipping extraction")
-                extracted_path = path
+                extracted_path = Path(SOUND_DIR) / path.name
+                extracted_path.write_bytes(path.read_bytes())
             else:
                 debug(f"{path} is an unrecognized filetype, skipping")
                 extracted_path = None
@@ -202,11 +203,11 @@ def unzip(zippaths: pd.Series) -> pd.Series:
                             ]
                     if len(mp3filenames) == 0:
                         extracted_path = None
-                        debug(f"{path} contains no mp3 files")
+                        debug(f"{path} contains no sound files")
                     elif len(mp3filenames) >= 1:
                         mp3filename = mp3filenames[0]
                         if len(mp3filenames) > 1:
-                            debug(f"{zip_ref.filename} contains more than one mp3 file, selecting first one")
+                            debug(f"{zip_ref.filename} contains more than one sound file, selecting first one")
                         debug(f"extracting {mp3filename}")
                         extracted_path = zip_ref.extract(
                                 mp3filename,
