@@ -28,6 +28,7 @@ LOG_MAXBYTES=262144  # 64**3
 DIRS=[DOWNLOAD_DIR, SOUND_DIR]
 SHORTEST_PLAY=5  # sec; sleep the remainder of this period if played sound is shorter
 ALLOWED_SOUNDFILES=['.mp3', '.wav', '.aiff', '.oog', '.flac']
+ALLOWED_COMPRESSION=['.zip']
 
 """ TODO
 1. Logging to file (how to make logger global?)
@@ -80,6 +81,19 @@ def load_data(soundscsv: str) -> pd.DataFrame:
     sdf=pd.read_csv(soundscsv)
     return sdf
 
+def _massage_filename(fn: str, title: str) -> str:
+    """ If a filename is not proper, make it so
+    """
+    p = Path(fn)
+    if p.suffix in ALLOWED_SOUNDFILES + ALLOWED_COMPRESSION:
+        return fn
+    else:
+        sfx = '.' + fn[-3:]
+        if sfx in ALLOWED_SOUNDFILES:  # Account for links like "foo.com?id=10&type=mp3"
+            r = title + sfx
+            return r
+        else:
+            raise ValueError(f"Unrecognized filename format: {fn}")
 
 def download(links_and_titles: pd.DataFrame) -> pd.Series:
     """ Download the links in the URL column if they don't exist already
@@ -88,7 +102,8 @@ def download(links_and_titles: pd.DataFrame) -> pd.Series:
     for i, row in links_and_titles.iterrows():
         url = row["URL"]
         title = row["title"]
-        filename = url.split("/")[-1]
+        _filename = url.split("/")[-1]
+        filename = _massage_filename(_filename, title)
         save_path = Path(DOWNLOAD_DIR) / filename
         save_paths.append(save_path)
         if not save_path.exists():
@@ -99,7 +114,7 @@ def download(links_and_titles: pd.DataFrame) -> pd.Series:
     return pd.Series(save_paths)
 
 
-def download_url(url, save_path, chunk_size=128):
+def download_url(url, save_path, chunk_size=128) -> int:
     """
     :param url: from where to download
     :param save_path: to where to download
@@ -112,6 +127,7 @@ def download_url(url, save_path, chunk_size=128):
         return 0
     except Exception as e:
         debug("Encountered error downloading from {url}:\nstr(e)")
+        return -1
 
 def tod() -> (str, str):
     """ Return whether it is currently Morning, Afternoon, or Night
