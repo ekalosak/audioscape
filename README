@@ -1,6 +1,11 @@
-python 3.7.4
+# audioscape
+A tiny utility to decorate your apartment with sound.
+Probably better to get a playlist from your favorite streaming service instead, but I run this on an RPi for some pleasant background noise.
 
+# requirements
+python 3.7.4
 depends on VLC `apt-get install vlc`
 and python dependencies `pip install -r requirements.txt`
 
+# usage
 to run do `python play_sounds.py`
